@@ -1,3 +1,19 @@
+---
+title: "Colors"
+author: "Ervin Madaha, Jennifer Wilken, Shuaib Yunus"
+date: "5/16/2018"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+Load and format the data in a reusable way:
+```{r load}
 masterCard<-read.csv2("MasterColorCard.csv")
 
 raw<-read.csv2("LabMeasurements-Color-Card.csv")
@@ -5,22 +21,6 @@ raw<-read.csv2("LabMeasurements-Color-Card.csv")
 sheets<-rep(1:13,42)
 raw$sheet<-sheets
 
-#Variance with respect to the master
-
-#Plot a 64x64 heat map of the variance of the colors
-#accross all the colors.
-
-#Do the same by the 42 places
-
-#Dimensions
-# Position on the sheet
-# Sheet
-# L component
-# A component
-# B component
-
-#Centered and scaled to the mastered
-#Sheet , X, Y,Xc,Yc, L, A, B
 column_names<-names(raw)[names(raw)!=c('Row','Column','sheet')]
 l_data<-reshape(raw,varying = column_names, direction= "long", sep="" )
 l_data$Xc<-floor(l_data$time/10)
@@ -52,62 +52,62 @@ joined_d$b_scaled<-joined_d$b_centered/b_sd
 joined_d$X_scaled<-(joined_d$X-mean(joined_d$X))/sd(joined_d$X)
 joined_d$Y_scaled<-(joined_d$Y-mean(joined_d$Y))/sd(joined_d$Y)
 joined_d$sheet_scaled<-(joined_d$sheet-mean(joined_d$sheet))/sd(joined_d$sheet)
+```
 
-#This tells nothing but there are some funny outliers
-# Play around with different columns to see different observations
-pca.out<-prcomp(joined_d[c("DE_scaled","X","Y")],scale. = TRUE)
-biplot(pca.out, xlabs=rep("·", nrow(joined_d)))
+## Delta E computation
 
-####################################################
-
-# DE computation 
+Load the library we'll be using:
+```{r deltae-example, message=FALSE}
 library("colorscience")
+```
 
-# Simple example 
-lab1<-c(51.641,0.169,3.054)
-lab2<-c(55.7489,0.0936,2.0137)
-deltaE2000(lab1,lab2) #dE distance
-
-# Function for getting a DE vector from 2 L,a,b dataframes 
-# Might be replaced with a one liner at a more creative time
+Let's create a convenience function for getting a Delta E (DE) vector from 2 L,a,b dataframes:
+```{r deltae-helper}
 getDEvector <-function(x, y){
   res <- 1:dim(x)[1]
   for (i in 1:dim(x)[1]){
     res[i] <- deltaE2000(data.matrix(x[i,]),data.matrix(y[i,]))
-  }  
+  }
   return(res)
 }
+```
 
-# Adding a column for DE values from L, a, b values of measured vs master
-joined_d$DE <- getDEvector(joined_d[,c("L_measured","a_measured","b_measured")],joined_d[,c("L_master","a_master","b_master")])
+Let's add a column for Delta E values from L, a, b values of measured versus master to our dataframe:
+```{r add-de-col}
+joined_d$DE <-
+  getDEvector(joined_d[, c("L_measured", "a_measured", "b_measured")],
+              joined_d[, c("L_master", "a_master", "b_master")])
+```
 
-# centering and scaling the DE column
-mean(joined_d$DE)
+Center and scale the Delta E column:
+```{r center-delta-e}
 DE_sd<-sqrt(sum((joined_d$DE-mean(joined_d$DE))**2)/dim(joined_d)[1])
 joined_d$DE_scaled <- (joined_d$DE -mean(joined_d$DE))/DE_sd
+```
 
-# Creating an 64x546 matrix of DE values to recreate the color card, DEM - DE Matrix
-# each row is a color on the 8x8 color card and columns are each color card (13x42(7x6))
+Create a 64x546 matrix of DE values to recreate the color card DEM (DE Matrix).
+Each row is a color on the 8x8 color card and columns are each color card (13x42(7x6))
+```{r create-de-matrix}
 DEM <-  matrix(joined_d$DE,64, byrow = TRUE)
 DEM_mean <- rowMeans(DEM) # mean of each row to reduce each color to a single value
 DEM_sd <- apply(DEM,1,sd) # Interesting to see how each color varies
+```
 
-# Conversion into 8x8 matrix
+Create an 8x8 matrix representing a card:
+```{r}
 DEM_avgcard <- matrix(DEM_mean,8,byrow = TRUE)
 DEM_sd_scaledcard <- matrix(DEM_sd/max(DEM_sd),8,byrow = TRUE)
+```
 
+## Plots
 
-# PLotting of the 8x8 color card
-xspace<-cbind(1:100,1:100)
-plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
-start<-5
-width<-8
-spacing<-2
-
-# One way to spread the color to express the DE spread across the color card
+One way to spread the color to express the DE spread across the color card:
+```{r}
 colrange <- colorRampPalette(c("yellowgreen","yellow","red"))(100)
+```
 
-# Another way to express the color based on the relative human distinction
+Another way to express the color based on the relative human distinction:
+```{r}
 getDEcolor <-function(x){
   if (x < 1) "grey" # Unnoticable to the human eye
   else if (1 < x && x < 2) "yellowgreen" # barely noticable
@@ -115,8 +115,16 @@ getDEcolor <-function(x){
   else if  (4 < x && x < 10) "orange" # distinguishable 
   else if (10 < x ) "red" # clearly distinct
 }
+```
 
-# Plotting DE values with the 2nd color scheme only half  
+Plot DE values with the 2nd color scheme only half:
+```{r}
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-5
+width<-8
+spacing<-2
+
 for( i in 1:8){
   for( j in 1:8){
     xleft<-i*(width+spacing)
@@ -124,8 +132,16 @@ for( i in 1:8){
     rect(xleft,ybottom,xleft+width,ybottom+width,col=getDEcolor(DEM_avgcard[i,j]),border = FALSE)
   }
 }
+```
 
-# Plotting the right half of colors with sd following color scheme 1
+Plot the right half of colors with sd following color scheme 1:
+```{r}
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-5
+width<-8
+spacing<-2
+
 for( i in 1:8){
   for( j in 1:8){
     xleft<-i*(width+spacing)
@@ -134,7 +150,10 @@ for( i in 1:8){
     
   }
 }
+```
 
+Perform PCA on the data, which tells us that there are some funny outliers:
+```{r}
 summarized<-aggregate(.~joined_d$Xc+joined_d$Yc,joined_d,FUN = mean)
 summarized$dE<-0
 for(i in 1:dim(summarized)[1]){
@@ -149,6 +168,12 @@ for(i in 1:dim(summarized)[1]){
 
 summarized$dE_scaled<-(summarized$dE-mean(summarized$dE))/sd(summarized$dE)
 
+pca.out<-prcomp(joined_d[c("DE_scaled","X","Y")],scale. = TRUE)
+biplot(pca.out, xlabs=rep("·", nrow(joined_d)))
+```
+
+Try a different color scheme:
+```{r}
 xspace<-cbind(1:100,1:100)
 plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
 start<-5
@@ -165,13 +190,4 @@ for( i in 1:8){
     rect(xleft,ybottom,xleft+width,ybottom+width,col=dEpallette[ceiling(log_dE)],border = FALSE)
   }
 }
-
-for( i in 1:8){
-  for( j in 1:8){
-    xleft<-i*(width+spacing)
-    ybottom<-j*(width+spacing)
-    log_dE<-log(summarized$dE[which(summarized$Xc==i&summarized$Yc==j)])
-    rect(xleft,ybottom,xleft+width,ybottom+width,col=dEpallette[ceiling(log_dE)],border = FALSE)
-  }
-}
-
+```
