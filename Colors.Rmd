@@ -1,13 +1,13 @@
 ---
 title: "Colors"
 author: "Ervin Madaha, Jennifer Wilken, Shuaib Yunus"
-date: "5/16/2018"
+date: "5/21/2018"
 output:
   pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.width=6, fig.height=6, fig.align="center")
 ```
 
 ## Setup
@@ -129,7 +129,8 @@ for( i in 1:8){
   for( j in 1:8){
     xleft<-i*(width+spacing)
     ybottom<-j*(width+spacing)
-    rect(xleft,ybottom,xleft+width,ybottom+width,col=getDEcolor(DEM_avgcard[i,j]),border = FALSE)
+    rect(xleft,ybottom,xleft+width,ybottom+width,col=getDEcolor(DEM_avgcard[i,j]),
+         border = FALSE)
   }
 }
 ```
@@ -139,15 +140,19 @@ Plot the right half of colors with sd following color scheme 1:
 xspace<-cbind(1:100,1:100)
 plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
 start<-5
-width<-8
-spacing<-2
+width<-10
+spacing<-1
 
 for( i in 1:8){
   for( j in 1:8){
     xleft<-i*(width+spacing)
     ybottom<-j*(width+spacing)
-    rect(xleft+width/2,ybottom,xleft+width,ybottom+width,col=colrange[round(DEM_sd_scaledcard[i,j]*100)],border = FALSE)
-    
+    rect(xleft+width/2,
+         ybottom,
+         xleft+width,
+         ybottom+width,
+         col=colrange[round(DEM_sd_scaledcard[i,j]*100)],
+         border = FALSE)
   }
 }
 ```
@@ -162,9 +167,8 @@ for(i in 1:dim(summarized)[1]){
                                  summarized$b_measured[i]),
                                c(summarized$L_master[i],
                                  summarized$a_master[i],
-                                 summarized$b_master[i]))  
+                                 summarized$b_master[i]))
 }
-
 
 summarized$dE_scaled<-(summarized$dE-mean(summarized$dE))/sd(summarized$dE)
 
@@ -187,7 +191,119 @@ for( i in 1:8){
     xleft<-i*(width+spacing)
     ybottom<-j*(width+spacing)
     log_dE<-log(summarized$dE[which(summarized$Xc==i&summarized$Yc==j)])
-    rect(xleft,ybottom,xleft+width,ybottom+width,col=dEpallette[ceiling(log_dE)],border = FALSE)
+    rect(xleft,ybottom,xleft+width,ybottom+width,col=dEpallette[ceiling(log_dE)],
+         border = FALSE)
   }
 }
+```
+
+Plot the means and variances of all sheets (right: means, left: variances).
+```{r}
+par(mfrow=c(1,2))
+sheets <- matrix(nrow=13,ncol=2688)
+sheetMeans <- c()
+sheetVars <- c()
+
+for (i in 1:13) {
+  sheets[i,] <- joined_d$DE[which(joined_d$sheet==i)]
+  sheetMeans[i] <- mean(joined_d$DE[which(joined_d$sheet==i)])
+  sheetVars[i] <- var(joined_d$DE[which(joined_d$sheet==i)])
+}
+
+boxplot(sheetMeans)
+boxplot(sheetVars)
+par(mfrow=c(1,1))
+```
+
+Display the master color card (some colors are missing due to errors resulting from converting Lab to RGB):
+```{r}
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-5
+width<-8
+spacing<-2
+
+labVals <- c()
+for( i in 1:8){
+  for( j in 1:8){
+    xleft<-i*(width+spacing)
+    ybottom<-j*(width+spacing)
+    labVals <- masterCard[(masterCard$Crow==i & masterCard$Ccol==j), ][,c("L", "a", "b")]
+    
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=NA)
+    
+    tryCatch({
+      cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
+      rect(xleft,ybottom,xleft+width,ybottom+width,col=cola,border = FALSE)
+    }, warning = function(w) {
+    }, error = function(e) {})
+  }
+}
+```
+
+Which color deviates the most across all sheets from the master (highest delta E)? Top rectangle is what the color looks like in the master sheet. Bottom rectangle is what the average of the most deviated color looks like.
+```{r}
+maxDeVal <- max(summarized$dE, na.rm = TRUE)
+maxCol <- summarized[which.max(summarized$dE),]
+
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-1
+width<-30
+spacing<-2
+
+a <- convertColor(c(maxCol$L_master, maxCol$a_master, maxCol$b_master),
+                  from="Lab",to="sRGB",clip=NA)
+b <- convertColor(c(maxCol$L_measured, maxCol$a_measured, maxCol$b_measured),
+                  from="Lab",to="sRGB",clip=NA)
+a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
+b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
+
+xleft<-1*(width+spacing)
+ybottom<-1*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
+
+xleft<-1*(width+spacing)
+ybottom<-2*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
+```
+
+The delta of the above E colors is `r maxDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) the colors are more similar than opposite. However, the difference is perceptible to the common human eye.
+
+Which color deviates the least (lowest delta E)? Top rectangle is what the color looks like in the master sheet. Bottom rectangle is what the average of the most deviated color looks like.
+```{r}
+minDeVal <- min(summarized$dE, na.rm = TRUE)
+minCol <- summarized[which.min(summarized$dE),]
+
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-1
+width<-30
+spacing<-2
+
+a <- convertColor(c(minCol$L_master, minCol$a_master, minCol$b_master),
+                  from="Lab",to="sRGB",clip=NA)
+b <- convertColor(c(minCol$L_measured, minCol$a_measured, minCol$b_measured),
+                  from="Lab",to="sRGB",clip=NA)
+a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
+b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
+
+xleft<-1*(width+spacing)
+ybottom<-1*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
+
+xleft<-1*(width+spacing)
+ybottom<-2*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
+```
+
+The delta of the above E colors is `r minDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) that the difference between the colors is not perceptible to the common human eye.
+
+Heat map of the summarized Lab values across all sheets against their master values:
+```{r}
+x <- summarized[,c("L_measured", "a_measured", "b_measured",
+                   "L_master", "a_master", "b_master")]
+
+# Use 'scale' to normalize (right)
+heatmap(as.matrix(x), scale="column", col = terrain.colors(256), margins=c(8,5))
 ```
