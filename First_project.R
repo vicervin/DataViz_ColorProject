@@ -1,3 +1,4 @@
+setwd("~/Documents/Uni/Sem02/Viz/DataViz_ColorProject")
 masterCard<-read.csv2("MasterColorCard.csv")
 
 raw<-read.csv2("LabMeasurements-Color-Card.csv")
@@ -55,7 +56,7 @@ joined_d$sheet_scaled<-(joined_d$sheet-mean(joined_d$sheet))/sd(joined_d$sheet)
 
 #This tells nothing but there are some funny outliers
 # Play around with different columns to see different observations
-pca.out<-prcomp(joined_d[c("DE_scaled","X","Y")],scale. = TRUE)
+pca.out<-prcomp(joined_d[c("DE_scaled","Xc","Yc")],scale. = TRUE)
 biplot(pca.out, xlabs=rep("·", nrow(joined_d)))
 
 ####################################################
@@ -175,3 +176,64 @@ for( i in 1:8){
   }
 }
 
+
+Xc <- rep(1:8, each =8)
+Yc <- rep(1:8,8)
+Labavg <- data.frame(Xc,Yc)
+L <- zeros(8*8,1)
+a <- zeros(8*8,1)
+b <- zeros(8*8,1)
+
+for( i in 1:8){
+  row <- joined_d[joined_d$Xc == i,]
+  for( j in 1:8){
+    color <- row[row$Yc == j,]
+    L[(i-1)*8+j] <- mean(color$L_measured)
+    a[(i-1)*8+j] <- mean(color$a_measured)
+    b[(i-1)*8+j] <- mean(color$b_measured)
+  }
+}
+
+Labavg$L <- L
+Labavg$a <- a
+Labavg$b <- b
+
+
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-5
+width<-8
+spacing<-2
+
+labVals <- c()
+for( i in 1:8){
+  for( j in 1:8){
+    xleft<-i*(width+spacing)
+    ybottom<-j*(width+spacing)
+    labVals <- Labavg[(Labavg$Xc==i & Labavg$Yc==j), ][,c("L", "a", "b")]
+    
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
+    
+    tryCatch({
+      cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
+      rect(xleft,ybottom,xleft+width,ybottom+width,col=cola,border = FALSE)
+    }, warning = function(w) {
+    }, error = function(e) {print(c(i,j,b))})
+  }
+}
+labVals <- c()
+for( i in 1:8){
+  for( j in 1:8){
+    xleft<-i*(width+spacing)
+    ybottom<-j*(width+spacing)
+    labVals <- masterCard[(masterCard$Crow==i & masterCard$Ccol==j), ][,c("L", "a", "b")]
+    
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
+    
+    tryCatch({
+      cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
+      rect(xleft,ybottom,xleft+width/2,ybottom+width,col=cola,border = FALSE)
+    }, warning = function(w) {
+    }, error = function(e) {print(c(i,j,b))})
+  }
+}

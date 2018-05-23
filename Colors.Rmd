@@ -111,8 +111,8 @@ Another way to express the color based on the relative human distinction:
 getDEcolor <-function(x){
   if (x < 1) "grey" # Unnoticable to the human eye
   else if (1 < x && x < 2) "yellowgreen" # barely noticable
-  else if (2 < x && x < 4) "yellow" # noticable difference on a keen eye
-  else if  (4 < x && x < 10) "orange" # distinguishable 
+  else if (2 < x && x < 3) "yellow" # noticable difference on a keen eye
+  else if  (3 < x && x < 10) "orange" # distinguishable 
   else if (10 < x ) "red" # clearly distinct
 }
 ```
@@ -147,6 +147,15 @@ for( i in 1:8){
   for( j in 1:8){
     xleft<-i*(width+spacing)
     ybottom<-j*(width+spacing)
+    rect(xleft,ybottom,xleft+width,ybottom+width,col=getDEcolor(DEM_avgcard[i,j]),
+         border = FALSE)
+  }
+}
+
+for( i in 1:8){
+  for( j in 1:8){
+    xleft<-i*(width+spacing)
+    ybottom<-j*(width+spacing)
     rect(xleft+width/2,
          ybottom,
          xleft+width,
@@ -172,7 +181,7 @@ for(i in 1:dim(summarized)[1]){
 
 summarized$dE_scaled<-(summarized$dE-mean(summarized$dE))/sd(summarized$dE)
 
-pca.out<-prcomp(joined_d[c("DE_scaled","X","Y")],scale. = TRUE)
+pca.out<-prcomp(joined_d[c("DE_scaled","Xc","Yc")],scale. = TRUE)
 biplot(pca.out, xlabs=rep("·", nrow(joined_d)))
 ```
 
@@ -230,13 +239,13 @@ for( i in 1:8){
     ybottom<-j*(width+spacing)
     labVals <- masterCard[(masterCard$Crow==i & masterCard$Ccol==j), ][,c("L", "a", "b")]
     
-    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=NA)
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
     
     tryCatch({
       cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
       rect(xleft,ybottom,xleft+width,ybottom+width,col=cola,border = FALSE)
     }, warning = function(w) {
-    }, error = function(e) {})
+    }, error = function(e) {print(c(i,j,b))})
   }
 }
 ```
