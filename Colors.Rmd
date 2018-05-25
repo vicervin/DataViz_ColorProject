@@ -3,7 +3,7 @@ title: "Colors"
 author: "Ervin Madaha, Jennifer Wilken, Shuaib Yunus"
 date: "5/21/2018"
 output:
-  bookdown::pdf_document2: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -264,7 +264,8 @@ And a Display of the master color card(left) vs the average of all printed color
 ```{r}
 
 xspace<-cbind(1:100,1:100)
-plot(xspace,type="n",axes=FALSE,xlab = " Mean of measured(right) vs Master(left) colors ",ylab = "")
+plot(xspace,type="n",axes=FALSE,
+     xlab = " Mean of measured(right) vs Master(left) colors ",ylab = "")
 title("Color card comparison")
 start<-5
 width<-8
@@ -277,7 +278,8 @@ for( i in 1:8){
     ybottom<-j*(width+spacing)
     labVals <- Labavg[(Labavg$Xc==i & Labavg$Yc==j), ][,c("L", "a", "b")]
     
-    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),
+                      from="Lab",to="Apple RGB",clip=TRUE)
     
     tryCatch({
       cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
@@ -293,11 +295,13 @@ for( i in 1:8){
     ybottom<-j*(width+spacing)
     labVals <- masterCard[(masterCard$Crow==i & masterCard$Ccol==j), ][,c("L", "a", "b")]
     
-    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
+    b <- convertColor(c(labVals$L, labVals$a, labVals$b),
+                      from="Lab",to="Apple RGB",clip=TRUE)
     
     tryCatch({
       cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
-      rect(xleft+width/2+spacing/8,ybottom,xleft+width,ybottom+width,col=cola,border = FALSE)
+      rect(xleft+width/2+spacing/8,ybottom,xleft+width,ybottom+width,
+           col=cola,border = FALSE)
     }, warning = function(w) {
     }, error = function(e) {print(c(i,j,b))})
   }
@@ -330,7 +334,7 @@ rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
 xleft<-0.7*(width+spacing)
 ybottom<-1*(width+spacing)
 rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
-title(" Furthest outlying colorcell comparison", sub = "Top: Mean of Measured, Bottom: Master")
+title(" Furthest outlying color cell comparison", sub = "Top: Mean of Measured, Bottom: Master")
 ```
 
 The delta of the above E colors is `r maxDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) the colors are more similar than opposite. However, the difference is perceptible to the common human eye.
@@ -361,7 +365,7 @@ xleft<-0.7*(width+spacing)
 ybottom<-1*(width+spacing)
 rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
 
-title("Colorcell with the least difference", sub = "Top: Mean of Measured, Bottom: Master")
+title("Color cell with the least difference", sub = "Top: Mean of Measured, Bottom: Master")
 ```
 
 
@@ -375,5 +379,6 @@ x <- summarized[,c("L_measured", "a_measured", "b_measured",
                    "L_master", "a_master", "b_master")]
 
 # Use 'scale' to normalize (right)
-heatmap(as.matrix(x), scale="column", col = terrain.colors(256), margins=c(8,5), main = "Heatmap of Lab values (master & measured)")
+heatmap(as.matrix(x), scale="column", col = terrain.colors(256), margins=c(8,5),
+        main = "Heatmap of Lab values (master & measured)")
 ```
