@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE, fig.width=6, fig.height=6, fig.align="center"
 ## Setup
 
 Load and format the data in a reusable way:
+
+The data is formatted in a long table format where each row is to represent a single color thus all computations can be made row wise without any matrix shifting. Additional columns were added such as sheets, Xc,Yc (as color card coordinates per color), X,Y (as sheet coordinates per color)
 ```{r load}
 masterCard<-read.csv2("MasterColorCard.csv")
 
@@ -99,7 +101,7 @@ DEM_avgcard <- matrix(DEM_mean,8,byrow = TRUE)
 DEM_sd_scaledcard <- matrix(DEM_sd/max(DEM_sd),8,byrow = TRUE)
 ```
 
-## Plots
+## Plotting Means, Variances of the DE values
 
 One way to spread the color to express the DE spread across the color card:
 ```{r}
@@ -185,7 +187,7 @@ pca.out<-prcomp(joined_d[c("DE_scaled","Xc","Yc")],scale. = TRUE)
 biplot(pca.out, xlabs=rep("·", nrow(joined_d)))
 ```
 
-Try a different color scheme:
+Try a logarithmic scale:
 ```{r}
 xspace<-cbind(1:100,1:100)
 plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
@@ -224,88 +226,11 @@ boxplot(sheetVars)
 par(mfrow=c(1,1))
 ```
 
-Display the master color card (some colors are missing due to errors resulting from converting Lab to RGB):
-```{r}
-xspace<-cbind(1:100,1:100)
-plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
-start<-5
-width<-8
-spacing<-2
+## Color Comparison in RGB
 
-labVals <- c()
-for( i in 1:8){
-  for( j in 1:8){
-    xleft<-i*(width+spacing)
-    ybottom<-j*(width+spacing)
-    labVals <- masterCard[(masterCard$Crow==i & masterCard$Ccol==j), ][,c("L", "a", "b")]
-    
-    b <- convertColor(c(labVals$L, labVals$a, labVals$b),from="Lab",to="Apple RGB",clip=TRUE)
-    
-    tryCatch({
-      cola <- rgb(b[1,][1], b[1,][2], b[1,][3])
-      rect(xleft,ybottom,xleft+width,ybottom+width,col=cola,border = FALSE)
-    }, warning = function(w) {
-    }, error = function(e) {print(c(i,j,b))})
-  }
-}
-```
 
-Which color deviates the most across all sheets from the master (highest delta E)? Top rectangle is what the color looks like in the master sheet. Bottom rectangle is what the average of the most deviated color looks like.
-```{r}
-maxDeVal <- max(summarized$dE, na.rm = TRUE)
-maxCol <- summarized[which.max(summarized$dE),]
+Building the mean of L,a,b of all printed colorcards (8x8)
 
-xspace<-cbind(1:100,1:100)
-plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
-start<-1
-width<-30
-spacing<-2
-
-a <- convertColor(c(maxCol$L_master, maxCol$a_master, maxCol$b_master),
-                  from="Lab",to="sRGB",clip=NA)
-b <- convertColor(c(maxCol$L_measured, maxCol$a_measured, maxCol$b_measured),
-                  from="Lab",to="sRGB",clip=NA)
-a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
-b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
-
-xleft<-1*(width+spacing)
-ybottom<-1*(width+spacing)
-rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
-
-xleft<-1*(width+spacing)
-ybottom<-2*(width+spacing)
-rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
-```
-
-The delta of the above E colors is `r maxDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) the colors are more similar than opposite. However, the difference is perceptible to the common human eye.
-
-Which color deviates the least (lowest delta E)? Top rectangle is what the color looks like in the master sheet. Bottom rectangle is what the average of the most deviated color looks like.
-```{r}
-minDeVal <- min(summarized$dE, na.rm = TRUE)
-minCol <- summarized[which.min(summarized$dE),]
-
-xspace<-cbind(1:100,1:100)
-plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
-start<-1
-width<-30
-spacing<-2
-
-a <- convertColor(c(minCol$L_master, minCol$a_master, minCol$b_master),
-                  from="Lab",to="sRGB",clip=NA)
-b <- convertColor(c(minCol$L_measured, minCol$a_measured, minCol$b_measured),
-                  from="Lab",to="sRGB",clip=NA)
-a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
-b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
-
-xleft<-1*(width+spacing)
-ybottom<-1*(width+spacing)
-rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
-
-xleft<-1*(width+spacing)
-ybottom<-2*(width+spacing)
-rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
-```
-Building the mean of L,a,b of all colorcards, convert it to RGB and compare it with the mastercard.Again you can see only one strong outlier.
 ```{r}
 Xc <- rep(1:8, each =8)
 Yc <- rep(1:8,8)
@@ -327,7 +252,13 @@ for( i in 1:8){
 Labavg$L <- L
 Labavg$a <- a
 Labavg$b <- b
+```
 
+
+Conversion of Lab into RGB for master and measured color cards (some colors are truncated to fit RGB from Lab scale)
+And a Display of the master color card(left) vs the average of all printed color cards (right) :
+
+```{r}
 
 xspace<-cbind(1:100,1:100)
 plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
@@ -369,6 +300,67 @@ for( i in 1:8){
 }
 
 ```
+## Outlier
+
+Which color deviates the most across all sheets from the master (highest delta E)? Bottom rectangle is what the color looks like in the master sheet. Top rectangle is what the average of the most deviated color looks like.
+```{r}
+maxDeVal <- max(summarized$dE, na.rm = TRUE)
+maxCol <- summarized[which.max(summarized$dE),]
+
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-1
+width<-30
+spacing<-2
+
+a <- convertColor(c(maxCol$L_master, maxCol$a_master, maxCol$b_master),
+                  from="Lab",to="sRGB",clip=NA)
+b <- convertColor(c(maxCol$L_measured, maxCol$a_measured, maxCol$b_measured),
+                  from="Lab",to="sRGB",clip=NA)
+a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
+b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
+
+xleft<-1*(width+spacing)
+ybottom<-1*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
+
+xleft<-1*(width+spacing)
+ybottom<-2*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
+```
+
+The delta of the above E colors is `r maxDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) the colors are more similar than opposite. However, the difference is perceptible to the common human eye.
+
+Which color deviates the least (lowest delta E)? Bottom rectangle is what the color looks like in the master sheet. Top rectangle is what the average of the most deviated color looks like.
+```{r}
+minDeVal <- min(summarized$dE, na.rm = TRUE)
+minCol <- summarized[which.min(summarized$dE),]
+
+xspace<-cbind(1:100,1:100)
+plot(xspace,type="n",axes=FALSE,xlab = "",ylab = "")
+start<-1
+width<-30
+spacing<-2
+
+a <- convertColor(c(minCol$L_master, minCol$a_master, minCol$b_master),
+                  from="Lab",to="sRGB",clip=NA)
+b <- convertColor(c(minCol$L_measured, minCol$a_measured, minCol$b_measured),
+                  from="Lab",to="sRGB",clip=NA)
+a_color <- rgb(a[1,][1], a[1,][2], a[1,][3])
+b_color <-  rgb(b[1,][1], b[1,][2], b[1,][3])
+
+xleft<-1*(width+spacing)
+ybottom<-1*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=a_color,border = FALSE)
+
+xleft<-1*(width+spacing)
+ybottom<-2*(width+spacing)
+rect(xleft,ybottom,xleft+width,ybottom+width,col=b_color,border = FALSE)
+```
+
+
+## HeatMap
+
 The delta of the above E colors is `r minDeVal`, which means (according to [this chart](http://zschuessler.github.io/DeltaE/learn/)) that the difference between the colors is not perceptible to the common human eye.
 
 Heat map of the summarized Lab values across all sheets against their master values:
